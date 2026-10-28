@@ -23,7 +23,62 @@ double accelerazione(Sistema s) {
 }
 
 double calcola_energia(Sistema s) {
-  return 0.5 * s.v * s.v + 0.5 * omega0 * omega0 * x * x;
+  return 0.5 * s.v * s.v + 0.5 * s.omega0 * s.omega0 * s.x * s.x;
+}
+
+void rk2(Sistema *s, double dt) {
+  double x0 = s->x;
+  double v0 = s->v;
+
+  double kx1 = v0;
+  double kv1 = accelerazione(*s); //Calcoliamo la prima derivata,k1
+
+  //Creiamo uno stato temporaneo a dt/2
+
+  Sistema temp = *s;
+  temp.x = x0 + 0.5 * dt * kx1;
+  temp.v = v0 + 0.5 * dt * kv1;
+
+  //Calcola k2 nel punto medio
+
+  double kx2 = temp.v;
+  double kv2 = accelerazione(temp);
+
+  s->x = x0 + dt * kx2;
+  s->v = v0 + dt * kv2;
+
+}
+
+void rk4(Sistema *s, double dt) {
+  double x0 = s->x;
+  double v0 = s->v;
+
+  double kx1 = v0;
+  double kv1 = accelerazione(*s);
+
+  Sistema temp = *s;
+  temp.x = x0 + 0.5 * dt * kx1;
+  temp.v = v0 + 0.5 * dt * kv1;
+
+  double kx2 = temp.v;
+  double kv2 = accelerazione(temp);
+
+  Sistema temp_2 = *s;
+  temp_2.x = x0 + 0.5 * dt * kx2;
+  temp_2.v = v0 + 0.5 * dt * kv2;
+
+  double kx3 = temp_2.v;
+  double kv3 = accelerazione(temp_2);
+
+  Sistema temp_3 = *s;
+  temp_3.x = x0 + dt * kx3;
+  temp_3.v = v0 + dt * kv3;
+
+  double kx4 = temp_3.v;
+  double kv4 = accelerazione(temp_3);
+
+  s->x = x0 +(dt / 6.0) * (kx1 + 2.0 * kx2 + 2.0 * kx3 + kx4); //Moltiplicazione per i coefficient della media pesata e raccoglimento a fattor comune
+  s->v = v0 + (dt / 6.0) * (kv1 + 2.0 * kx2 + 2.0 * kx3 + kv4);
 }
 
 //Qui metti i due metodi con void per il calcolo dei coefficienti
@@ -51,33 +106,24 @@ int main(int argc, char *argv[]) {
   s.omega0 = omega0;
   s.gamma = gamma;
   double E_iniziale = calcola_energia(s);
-    prinf("Energia iniziale: %f\n", E_iniziale);
-  double max_errore = 0.0
-
+    printf("Energia iniziale: %f\n", E_iniziale);
   
   for(int i = 0; i<= nsteps; i ++) {
-    s.t += dt;
     if(strcmp(metodo, "rk2") == 0) {
       rk2(&s, dt);
-    } else if(strcmp(metodo, "rk4") == 0 {
+    } else if(strcmp(metodo, "rk4") == 0) {
 	rk4(&s, dt);
       }
 
       double E = calcola_energia(s);
-
-       double errore = fabs(E - E_iniziale);
-    if(errore > max_errore) {
-      max_errore = errore;
-    }  //Ricorda poi di mettere l'altro errore stasera
-
+    
     if(i % stride == 0) {
       printf("%f %f %f %f\n", s.t, s.x, s.v, E);
 
     }
+      s.t += dt;
 
   }
-
-  printf("%f %f\n", dt, max_errore);
 
   return 0;
 }
