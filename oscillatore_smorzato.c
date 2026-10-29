@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h> //Esempio di oscillatore sottosmorzato. Primo codice
 
+#define M 1.0
+
 typedef struct {
   double x;
   double v;
@@ -25,6 +27,33 @@ double accelerazione(Sistema s) {
 double calcola_energia(Sistema s) {
   return 0.5 * s.v * s.v + 0.5 * s.omega0 * s.omega0 * s.x * s.x;
 }
+
+double x_analitica(Sistema s, double x0, double v0) {
+  double beta = s.gamma / 2.0;
+  double omega_sq = (s.omega0 * s.omega0) - (s.gamma * s.gamma) / 4.0;
+
+  // Regime sottosmoezato ( omega^2 > 0)
+  if (omega_sq > 0) {
+    double omega = sqrt(omega_sq);
+    double A = x0;
+    double B = (v0 + beta * x0) / omega;
+    return exp(-beta * s.t) * (A * cos(omega * s.t) + B * sin(omega * s.t));
+  }
+  //Regime critico (omega^2 == 0)
+  else if (fabs(omega_sq) < 1e-9) {
+    double A = x0;
+    double B = v0 + beta * x0;
+    return exp(-beta * s.t) * (A + B * s.t);
+  }
+  //Regime sovrasmorzato (omega^2 < 0)
+  else {
+    double alpha = sqrt(-omega_sq);
+    double A = 0.5 * (x0 +(v0 + beta * x0) / alpha);
+    double B = 0.5 * (x0 -(v0 + beta * x0) / alpha);
+    
+}
+}
+
 
 void rk2(Sistema *s, double dt) {
   double x0 = s->x;
@@ -107,6 +136,8 @@ int main(int argc, char *argv[]) {
   s.gamma = gamma;
   double E_iniziale = calcola_energia(s);
     printf("Energia iniziale: %f\n", E_iniziale);
+
+    double max_errore = 0.0;
   
   for(int i = 0; i<= nsteps; i ++) {
     if(strcmp(metodo, "rk2") == 0) {
@@ -114,9 +145,14 @@ int main(int argc, char *argv[]) {
     } else if(strcmp(metodo, "rk4") == 0) {
 	rk4(&s, dt);
       }
-
-      double E = calcola_energia(s);
     
+      double E = calcola_energia(s);
+      double x_esatta = x_analitica(s, x0, v0);
+      double errore = fabs(x_esatta - s.x);
+      if (errore > max_errore) {
+	max_errore = errore;
+      }
+      
     if(i % stride == 0) {
       printf("%f %f %f %f\n", s.t, s.x, s.v, E);
 
